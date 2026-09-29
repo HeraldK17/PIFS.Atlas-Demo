@@ -416,37 +416,63 @@ function locateUser() {
     return;
   }
 
+  if (!window.isSecureContext) {
+    message.textContent =
+      "Location only works on a secure (https://) address. Open the site via its https:// link.";
+    return;
+  }
+
   button.disabled = true;
   message.textContent = "Finding your location…";
 
+  const onSuccess = ({ coords }) => {
+    button.disabled = false;
+    userLocation = {
+      longitude: coords.longitude,
+      latitude: coords.latitude,
+    };
+
+    updateLayer();
+    setViewState({
+      ...viewState,
+      ...userLocation,
+      zoom: 13,
+      transitionDuration: 800,
+      transitionInterpolator: new FlyToInterpolator(),
+    });
+
+    message.textContent =
+      `Your location is marked in green (accuracy about ${Math.round(coords.accuracy)} m). Company coverage is Denmark.`;
+  };
+
+  // Shows the browser's own error code and text, so the reason is visible.
+  const onFinalError = (error) => {
+    button.disabled = false;
+    const detail = `(code ${error.code}${error.message ? ": " + error.message : ""})`;
+    message.textContent =
+      error.code === 1
+        ? `Location denied ${detail}`
+        : error.code === 3
+          ? `Finding your location took too long. Please try again. ${detail}`
+          : `Your location is unavailable. Please try again. ${detail}`;
+  };
+
+  // First try high accuracy (GPS). If that fails for any reason other than
+  // permission being denied (Safari sometimes reports "unavailable" or times
+  // out here), retry once with normal accuracy before giving up.
   navigator.geolocation.getCurrentPosition(
-    ({ coords }) => {
-      button.disabled = false;
-      userLocation = {
-        longitude: coords.longitude,
-        latitude: coords.latitude,
-      };
-
-      updateLayer();
-      setViewState({
-        ...viewState,
-        ...userLocation,
-        zoom: 13,
-        transitionDuration: 800,
-        transitionInterpolator: new FlyToInterpolator(),
-      });
-
-      message.textContent =
-        `Your location is marked in green (accuracy about ${Math.round(coords.accuracy)} m). Company coverage is Denmark.`;
-    },
+    onSuccess,
     (error) => {
-      button.disabled = false;
-      message.textContent =
-        error.code === 1
-                   ? `Location denied: ${error.message}`
-          : error.code === 3
-            ? "Finding your location took too long. Please try again."
-            : "Your location is unavailable. Please try again.";
+      if (error.code === 1) {
+        onFinalError(error);
+        return;
+      }
+      message.textContent = "Still looking for your location…";
+      navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+        enableHighAccuracy: false,
+        timeout: 20000,
+        maximumAge: 300000,
+      });
     },
     {
       enableHighAccuracy: true,
