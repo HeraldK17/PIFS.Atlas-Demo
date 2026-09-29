@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Location test</title>
+
+<button id="locate">Test my location</button>
+<p id="result"></p>
+
+<script>
+document.getElementById("locate").onclick = () => {
+  const result = document.getElementById("result");
+  result.textContent = "Requesting location…";
+
+  navigator.geolocation.getCurrentPosition(
+    () => {
+      result.textContent = "Location access worked.";
+    },
+    (error) => {
+      result.textContent = `Error ${error.code}: ${error.message}`;
+    },
+    { timeout: 15000 }
+  );
+};
+</script>
+</html>
