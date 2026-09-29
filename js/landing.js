@@ -443,7 +443,7 @@ function locateUser() {
       button.disabled = false;
       message.textContent =
         error.code === 1
-          ? "Location permission was denied. Allow location access in your browser to try again."
+                   ? `Location denied: ${error.message}`
           : error.code === 3
             ? "Finding your location took too long. Please try again."
             : "Your location is unavailable. Please try again.";
